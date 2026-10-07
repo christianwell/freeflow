@@ -113,6 +113,60 @@ defaults delete com.zachlatta.freeflow context_request_timeout_seconds
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project, build, test, and submit changes.
 
+## Linux preview
+
+The recovered Linux client is a separate Python/Tk app. It supports **X11**
+sessions, a Ctrl+Alt+Space toggle shortcut, microphone recording, transcription,
+optional literal cleanup, and Ctrl+V paste. It does not yet support Wayland,
+Edit Mode, app context, custom shortcuts, a tray icon, or automatic updates.
+The native macOS app and its build remain unchanged.
+
+On Ubuntu/Debian:
+
+```bash
+sudo apt install python3-tk alsa-utils libxtst6
+make check-linux
+make run-linux
+```
+
+Enter your provider settings in the window and save them. Focus the destination
+text field, press Ctrl+Alt+Space, speak, and press the shortcut again to stop.
+Closing the window hides it rather than stopping dictation.
+
+To run automatically during your graphical user session:
+
+```bash
+make install-linux
+make show-linux                    # reopen the settings window
+systemctl --user stop freeflow     # stop the background app
+journalctl --user -u freeflow      # service startup diagnostics
+make uninstall-linux              # preserves your settings
+```
+
+Do not run a second copy while the service is active: both copies would try to
+grab the same shortcut. The service restarts after an exit, but cannot record
+while the computer is asleep or logged out. If the shortcut does not work after
+login, check that your session is X11 and restart the service from a desktop
+terminal (`systemctl --user restart freeflow`).
+
+**Privacy:** API keys are stored in plaintext in
+`~/.config/freeflow/config.json` (or under `$XDG_CONFIG_HOME`) with mode 0600,
+not in a credential vault. Settings are replaced atomically so failed saves
+preserve the previous file. Audio is temporarily written locally and removed
+after processing; an abrupt crash can leave a temporary WAV behind. Audio and
+text are sent only to your configured providers. Provider redirects are rejected;
+configure the final API URL rather than a redirecting URL. Raw provider error
+bodies are not displayed, since they may echo private content. Clipboard restoration covers
+text only, and skips restoration if clipboard contents have changed. No screen
+capture, telemetry, or transcript history is added.
+
+The regression suite uses synthetic WAVs, mocked providers, and a loopback HTTP
+server for redirect checks. Before merging,
+manually verify real microphone capture, shortcut delivery to another app,
+paste and clipboard restoration, and service behavior across login. These are
+not established by the automated tests. `make check` still requires macOS for
+the Swift app; use `make check-linux` for this client.
+
 ## License
 
 Licensed under the MIT license.

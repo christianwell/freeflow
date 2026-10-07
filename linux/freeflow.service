@@ -1,0 +1,13 @@
+[Unit]
+Description=FreeFlow Linux dictation
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=notify
+ExecStart=%h/.local/lib/freeflow/freeflow
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
