@@ -43,7 +43,38 @@ endif
 
 .PHONY: all check clean run icon dmg codesign-dmg notarize test typecheck validate
 
+ifeq ($(shell uname -s),Linux)
+all: linux
+else
 all: $(APP_EXECUTABLE_TARGET)
+endif
+
+.PHONY: linux check-linux run-linux install-linux show-linux uninstall-linux
+linux:
+	@mkdir -p "$(BUILD_DIR)"
+	PYTHONPYCACHEPREFIX="$(BUILD_DIR)/pycache" python3 -m py_compile linux/freeflow.py
+	install -m 755 linux/freeflow.py "$(BUILD_DIR)/freeflow"
+
+check-linux: linux
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s linux -p 'test_*.py' -v
+
+run-linux: linux
+	"$(BUILD_DIR)/freeflow"
+
+install-linux: linux
+	install -Dm755 "$(BUILD_DIR)/freeflow" "$(HOME)/.local/lib/freeflow/freeflow"
+	install -Dm644 linux/freeflow.service "$(HOME)/.config/systemd/user/freeflow.service"
+	systemctl --user daemon-reload
+	systemctl --user enable freeflow.service
+	systemctl --user restart freeflow.service
+
+show-linux:
+	systemctl --user kill --signal=USR1 freeflow.service
+
+uninstall-linux:
+	systemctl --user disable --now freeflow.service
+	rm -f "$(HOME)/.config/systemd/user/freeflow.service" "$(HOME)/.local/lib/freeflow/freeflow"
+	systemctl --user daemon-reload
 
 $(APP_EXECUTABLE_TARGET): $(SOURCES) Info.plist $(ICON_ICNS)
 	@mkdir -p "$(MACOS_DIR)" "$(RESOURCES)"
@@ -167,4 +198,8 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: all
+ifeq ($(shell uname -s),Linux)
+	"$(BUILD_DIR)/freeflow"
+else
 	open "$(APP_BUNDLE)"
+endif
